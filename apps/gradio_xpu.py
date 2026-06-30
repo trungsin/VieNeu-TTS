@@ -111,12 +111,29 @@ def get_model_status_message() -> str:
 
 def restore_ui_state():
     """Update UI components based on persistence"""
-    global model_loaded
+    global model_loaded, tts
     msg = get_model_status_message()
+    # Repopulate the preset voice dropdown from the loaded model so every page load
+    # (including after startup auto-load) sees the voices without clicking "Load Model".
+    voice_upd = gr.update()
+    if model_loaded and tts is not None:
+        try:
+            voices = tts.list_preset_voices()
+        except Exception:
+            voices = []
+        if voices:
+            is_tuple = isinstance(voices[0], tuple)
+            values = [v[1] for v in voices] if is_tuple else voices
+            default_v = getattr(tts, "_default_voice", None)
+            if not default_v or default_v not in values:
+                default_v = values[0] if values else None
+            voices = sorted(voices, key=lambda x: str(x[0])) if is_tuple else sorted(voices)
+            voice_upd = gr.update(choices=voices, value=default_v, interactive=True)
     return (
-        msg, 
+        msg,
         gr.update(interactive=model_loaded), # btn_generate
-        gr.update(interactive=False)         # btn_stop
+        gr.update(interactive=False),        # btn_stop
+        voice_upd,                           # voice_select
     )
 
 def load_model(backbone_choice: str, codec_choice: str, device_choice: str, 
@@ -826,7 +843,7 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS (XPU)", head=head_html) a
 
         demo.load(
             fn=restore_ui_state,
-            outputs=[model_status, btn_generate, btn_stop]
+            outputs=[model_status, btn_generate, btn_stop, voice_select]
         )
 
 def main():
@@ -838,6 +855,17 @@ def main():
 
     if server_name == "0.0.0.0" and os.getenv("GRADIO_SHARE") is None:
         share = False
+
+    # Auto-load the default model at startup so the preset voice list is ready
+    # immediately — users no longer have to click "Load Model" before choosing a voice.
+    if tts is None:
+        print("🔄 Auto-loading default model at startup: VieNeu-TTS (GPU) / NeuCodec (Distill)")
+        try:
+            for _ in load_model("VieNeu-TTS (GPU)", "NeuCodec (Distill)", "XPU"):
+                pass
+            print("✅ Startup model load complete.")
+        except Exception as e:
+            print(f"⚠️ Startup auto-load failed (load manually via UI): {e}")
 
     demo.queue().launch(server_name=server_name, server_port=server_port, share=share)
 

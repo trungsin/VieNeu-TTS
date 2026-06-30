@@ -207,24 +207,38 @@ def get_model_status_message() -> str:
 
 def restore_ui_state():
     """Update UI components based on persistence"""
-    global model_loaded, tts, PRESET_VOICES_CACHE
+    global model_loaded, tts, PRESET_VOICES_CACHE, current_backbone
     msg = get_model_status_message()
-    # Re-populate the preset voice dropdown from cache so every page load (not just
-    # the client that clicked "Load Model") sees the voice list right away.
+    # When a model is already loaded (e.g. startup auto-load), every fresh page load
+    # must see the same UI load_model produces: populated preset-voice dropdown and the
+    # Preset / Voice Cloning / Conversation tabs unhidden. restore_ui_state is the only
+    # demo.load handler, so it has to mirror that state instead of leaving them hidden.
     if model_loaded and PRESET_VOICES_CACHE:
         values = [v[1] if isinstance(v, tuple) else v for v in PRESET_VOICES_CACHE]
         default_v = getattr(tts, "_default_voice", None)
         if not default_v or default_v not in values:
             default_v = values[0] if values else None
         voice_upd = gr.update(choices=PRESET_VOICES_CACHE, value=default_v, interactive=True)
+        bb = current_backbone or ""
+        tab_preset_upd = gr.update(visible=True)
+        tab_custom_upd = gr.update(visible=_supports_cloning(bb))
+        is_v2 = bb in ("VieNeu-TTS-v2 (GPU)", "VieNeu-TTS-v2 (CPU)")
+        is_v3_conv = "v3" in bb.lower()
+        conv_tab_upd = gr.update(visible=is_v2 or is_v3_conv)
     else:
         voice_upd = gr.update()
+        tab_preset_upd = gr.update()
+        tab_custom_upd = gr.update()
+        conv_tab_upd = gr.update()
     return (
         msg,
         gr.update(interactive=model_loaded), # btn_generate
         gr.update(interactive=model_loaded), # btn_generate_conv
         gr.update(interactive=False),        # btn_stop
         voice_upd,                           # voice_select
+        tab_preset_upd,                      # tab_preset
+        tab_custom_upd,                      # tab_custom (holds the mic recorder)
+        conv_tab_upd,                        # conv_tab
     )
 
 def should_use_lmdeploy(backbone_choice: str, device_choice: str) -> bool:
@@ -2207,7 +2221,8 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS", head=head_html) as demo
         # Persistence: Restore UI state on load
         demo.load(
             fn=restore_ui_state,
-            outputs=[model_status, btn_generate, btn_generate_conv, btn_stop, voice_select]
+            outputs=[model_status, btn_generate, btn_generate_conv, btn_stop, voice_select,
+                     tab_preset, tab_custom, conv_tab]
         )
 
 def main():
