@@ -691,7 +691,7 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS (XPU)", head=head_html) a
                         voice_select = gr.Dropdown(choices=[], value=None, label="Giọng mẫu")
                     
                     with gr.TabItem("🦜 Voice Cloning", id="custom_mode") as tab_custom:
-                        custom_audio = gr.Audio(label="Audio giọng mẫu (3-5 giây) (.wav)", type="filepath")
+                        custom_audio = gr.Audio(label="Tải lên hoặc ghi âm giọng mẫu (3-5 giây)", type="filepath", sources=["upload", "microphone"])
                         cloning_warning_msg = gr.Markdown(visible=False, elem_id="cloning-warning")
                         custom_text = gr.Textbox(label="Nội dung audio mẫu - vui lòng gõ đúng nội dung của audio mẫu - kể cả dấu câu vì model rất nhạy cảm với dấu câu (.,?!)")
                         gr.Examples(
