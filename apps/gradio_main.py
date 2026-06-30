@@ -2232,7 +2232,10 @@ def main():
     if tts is None:
         print(f"🔄 Auto-loading default model at startup: {default_backbone} / {default_codec}")
         try:
-            for _ in load_model(default_backbone, default_codec, "Auto", True):
+            # force_lmdeploy=False: use the plain PyTorch path so startup works on any
+            # GPU host (lmdeploy needs the CUDA Toolkit / CUDA_PATH, often absent on
+            # driver-only boxes). Users wanting LMDeploy can re-load via the UI.
+            for _ in load_model(default_backbone, default_codec, "Auto", False):
                 pass
             print("✅ Startup model load complete.")
         except Exception as e:
