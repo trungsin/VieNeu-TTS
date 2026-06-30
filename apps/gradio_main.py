@@ -207,13 +207,24 @@ def get_model_status_message() -> str:
 
 def restore_ui_state():
     """Update UI components based on persistence"""
-    global model_loaded
+    global model_loaded, tts, PRESET_VOICES_CACHE
     msg = get_model_status_message()
+    # Re-populate the preset voice dropdown from cache so every page load (not just
+    # the client that clicked "Load Model") sees the voice list right away.
+    if model_loaded and PRESET_VOICES_CACHE:
+        values = [v[1] if isinstance(v, tuple) else v for v in PRESET_VOICES_CACHE]
+        default_v = getattr(tts, "_default_voice", None)
+        if not default_v or default_v not in values:
+            default_v = values[0] if values else None
+        voice_upd = gr.update(choices=PRESET_VOICES_CACHE, value=default_v, interactive=True)
+    else:
+        voice_upd = gr.update()
     return (
-        msg, 
+        msg,
         gr.update(interactive=model_loaded), # btn_generate
         gr.update(interactive=model_loaded), # btn_generate_conv
-        gr.update(interactive=False)         # btn_stop
+        gr.update(interactive=False),        # btn_stop
+        voice_upd,                           # voice_select
     )
 
 def should_use_lmdeploy(backbone_choice: str, device_choice: str) -> bool:
@@ -2196,7 +2207,7 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS", head=head_html) as demo
         # Persistence: Restore UI state on load
         demo.load(
             fn=restore_ui_state,
-            outputs=[model_status, btn_generate, btn_generate_conv, btn_stop]
+            outputs=[model_status, btn_generate, btn_generate_conv, btn_stop, voice_select]
         )
 
 def main():
@@ -2215,6 +2226,17 @@ def main():
     # If server_name is "0.0.0.0" and GRADIO_SHARE is not set, disable sharing
     if server_name == "0.0.0.0" and os.getenv("GRADIO_SHARE") is None:
         share = False
+
+    # Auto-load the default model at startup so the preset voice list is ready
+    # immediately — users no longer have to click "Load Model" before choosing a voice.
+    if tts is None:
+        print(f"🔄 Auto-loading default model at startup: {default_backbone} / {default_codec}")
+        try:
+            for _ in load_model(default_backbone, default_codec, "Auto", True):
+                pass
+            print("✅ Startup model load complete.")
+        except Exception as e:
+            print(f"⚠️ Startup auto-load failed (load manually via UI): {e}")
 
     demo.queue().launch(server_name=server_name, server_port=server_port, share=share)
 
