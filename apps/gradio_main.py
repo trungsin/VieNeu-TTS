@@ -1860,15 +1860,15 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS", head=head_html) as demo
                                 # and a hidden reference-text box (-> false "missing ref text").
                                 _default_is_v2_gpu = (default_backbone == "VieNeu-TTS-v2 (GPU)")
                                 clone_info_md = gr.Markdown(
-                                    "ℹ️ **Voice Cloning (VieNeu-TTS v2).** Tải lên audio mẫu 3–5 giây "
+                                    "ℹ️ **Voice Cloning (VieNeu-TTS v2).** Tải lên hoặc ghi âm audio mẫu 3–5 giây "
                                     "và **nhập đúng nội dung** của audio đó (kể cả dấu câu) — v2 cần "
                                     "reference transcript để clone giọng."
                                     if _default_is_v2_gpu else
-                                    "ℹ️ **Voice Cloning (VieNeu-TTS v3).** Chỉ cần tải lên audio mẫu "
+                                    "ℹ️ **Voice Cloning (VieNeu-TTS v3).** Chỉ cần tải lên hoặc ghi âm audio mẫu "
                                     "3–5 giây; v3 clone trực tiếp từ audio, không cần nhập nội dung."
                                 )
                                 with gr.Group(visible=True) as cloning_elements_group:
-                                    custom_audio = gr.Audio(label="Audio giọng mẫu (3-5 giây) (.wav)", type="filepath")
+                                    custom_audio = gr.Audio(label="Tải lên hoặc ghi âm giọng mẫu (3-5 giây)", type="filepath", sources=["upload", "microphone"])
                                     cloning_warning_msg = gr.Markdown(visible=False, elem_id="cloning-warning")
                                     # v3 clones from audio only — the reference transcript box
                                     # is hidden for v3 (toggled by on_backbone_change).
