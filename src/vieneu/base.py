@@ -41,7 +41,10 @@ class BaseVieneuTTS(ABC):
 
     def __init__(self, codec_repo: Optional[str] = None, codec_device: str = "cpu"):
         self.sample_rate = 24_000
-        self.max_context = 2048
+        # Backbone context window. VieNeu-TTS v2/v3 backbones (Qwen3) expose
+        # max_position_embeddings=4096; use the full window so long chunks (reference
+        # audio codes + text phonemes + generated speech codes) don't overflow.
+        self.max_context = 4096
         self.hop_length = 480
 
         # Default streaming parameters

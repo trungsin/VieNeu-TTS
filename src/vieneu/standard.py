@@ -265,10 +265,19 @@ class VieNeuTTS(BaseVieneuTTS):
             inputs = {k: v.to(self.backbone.device) for k, v in inputs.items()}
 
             speech_end_id = self.tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
+            input_length = inputs["input_ids"].shape[-1]
+            # Budget as new tokens (see _infer_torch): the padded prompt may already be
+            # near the context window, so max_length would crash the batch.
+            max_new = self.max_context - input_length
+            if max_new < 50:
+                raise ValueError(
+                    f"Đoạn văn quá dài cho ngữ cảnh model ({input_length}/{self.max_context} token). "
+                    f"Hãy giảm 'Max Chars per Chunk' hoặc dùng audio mẫu ngắn hơn."
+                )
             with torch.no_grad():
                 output_tokens = self.backbone.generate(
                     **inputs,
-                    max_length=self.max_context,
+                    max_new_tokens=max_new,
                     eos_token_id=speech_end_id,
                     do_sample=True,
                     temperature=temperature,
@@ -276,8 +285,6 @@ class VieNeuTTS(BaseVieneuTTS):
                     use_cache=True,
                     min_new_tokens=50,
                 )
-
-            input_length = inputs["input_ids"].shape[-1]
             for i in range(len(texts)):
                 generated_ids = output_tokens[i, input_length:]
                 output_str = self.tokenizer.decode(generated_ids, add_special_tokens=False)
@@ -344,10 +351,21 @@ class VieNeuTTS(BaseVieneuTTS):
         import torch
         prompt_tensor = torch.tensor(prompt_ids).unsqueeze(0).to(self.backbone.device)
         speech_end_id = self.tokenizer.convert_tokens_to_ids("<|SPEECH_GENERATION_END|>")
+        input_length = prompt_tensor.shape[-1]
+        # Budget generation as new tokens against the real context window instead of a
+        # fixed max_length: with max_length the call crashes when the prompt (reference
+        # codes + long text) already exceeds it. If even a minimal generation won't fit,
+        # surface a clear message instead of transformers' cryptic length error.
+        max_new = self.max_context - input_length
+        if max_new < 50:
+            raise ValueError(
+                f"Đoạn văn quá dài cho ngữ cảnh model ({input_length}/{self.max_context} token). "
+                f"Hãy giảm 'Max Chars per Chunk' hoặc dùng audio mẫu ngắn hơn."
+            )
         with torch.no_grad():
             output_tokens = self.backbone.generate(
                 prompt_tensor,
-                max_length=self.max_context,
+                max_new_tokens=max_new,
                 eos_token_id=speech_end_id,
                 do_sample=True,
                 temperature=temperature,
@@ -355,7 +373,6 @@ class VieNeuTTS(BaseVieneuTTS):
                 use_cache=True,
                 min_new_tokens=50,
             )
-        input_length = prompt_tensor.shape[-1]
         output_str = self.tokenizer.decode(output_tokens[0, input_length:].cpu().numpy().tolist(), add_special_tokens=False)
         return output_str
 
