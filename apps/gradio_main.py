@@ -2245,14 +2245,20 @@ def main():
     # Auto-load the default model at startup so the preset voice list is ready
     # immediately — users no longer have to click "Load Model" before choosing a voice.
     if tts is None:
-        print(f"🔄 Auto-loading default model at startup: {default_backbone} / {default_codec}")
+        # Prefer LMDeploy for GPU backbones (batched, much faster on long text); v3 Turbo
+        # runs on PyTorch. LMDeploy needs CUDA_PATH — if its load fails for any reason,
+        # fall back to the plain PyTorch backend so startup still succeeds.
+        want_lmdeploy = "v3" not in default_backbone.lower()
+        print(f"🔄 Auto-loading default model at startup: {default_backbone} / {default_codec} (lmdeploy={want_lmdeploy})")
         try:
-            # force_lmdeploy=False: use the plain PyTorch path so startup works on any
-            # GPU host (lmdeploy needs the CUDA Toolkit / CUDA_PATH, often absent on
-            # driver-only boxes). Users wanting LMDeploy can re-load via the UI.
-            for _ in load_model(default_backbone, default_codec, "Auto", False):
+            for _ in load_model(default_backbone, default_codec, "Auto", want_lmdeploy):
                 pass
-            print("✅ Startup model load complete.")
+            if want_lmdeploy and not model_loaded:
+                print("⚠️ LMDeploy startup load failed; falling back to plain PyTorch backend...")
+                for _ in load_model(default_backbone, default_codec, "Auto", False):
+                    pass
+            print("✅ Startup model load complete." if model_loaded
+                  else "⚠️ Startup model load did not complete (load manually via UI).")
         except Exception as e:
             print(f"⚠️ Startup auto-load failed (load manually via UI): {e}")
 
