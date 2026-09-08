@@ -110,6 +110,12 @@ pdf = [
     "PyMuPDF>=1.25.0",
 ]
 
+# MCP server (apps/mcp_server.py) so other tool agents can call VieNeu-TTS.
+# Install with: pip install vieneu[mcp]  (or: uv add 'mcp[cli]')
+mcp = [
+    "mcp[cli]>=1.2.0",
+]
+
 # Optional Resemble Perth audio watermark (needs torch + torchaudio; Perth runs at 32 kHz,
 # so 48 kHz v3 output is resampled 48k→32k→48k around the watermark step).
 # Install with: pip install vieneu[watermark]
