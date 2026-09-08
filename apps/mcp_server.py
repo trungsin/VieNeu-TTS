@@ -32,10 +32,11 @@ from typing import Any, Optional
 import numpy as np
 
 try:
-    from mcp.server.fastmcp import FastMCP
+    # mcp SDK 2.x: FastMCP was renamed to MCPServer.
+    from mcp.server.mcpserver import MCPServer
 except ImportError as e:  # pragma: no cover
     raise SystemExit(
-        "The 'mcp' package is required. Install it, e.g.:\n"
+        "The 'mcp' package (SDK >= 2.0) is required. Install it, e.g.:\n"
         "    uv add 'mcp[cli]'\n"
         "or:  pip install 'mcp[cli]'"
     ) from e
@@ -48,7 +49,7 @@ _ONNX_DIR = os.environ.get("VIENEU_ONNX_DIR") or None
 _OUTPUT_DIR = Path(os.environ.get("VIENEU_OUTPUT_DIR", tempfile.gettempdir())) / "vieneu_mcp"
 _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-mcp = FastMCP("vieneu-tts")
+mcp = MCPServer("vieneu-tts")
 
 # Lazily-constructed singleton — model load is heavy, so defer until first use.
 _engine: Any = None
@@ -175,10 +176,11 @@ def synthesize(
 def main() -> None:
     transport = os.environ.get("VIENEU_MCP_TRANSPORT", "stdio").lower()
     if transport in ("sse", "http"):
-        # host/port are read by FastMCP from its settings/env; expose them explicitly.
-        mcp.settings.host = os.environ.get("VIENEU_MCP_HOST", "127.0.0.1")
-        mcp.settings.port = int(os.environ.get("VIENEU_MCP_PORT", "8010"))
-        mcp.run(transport="sse")
+        import asyncio
+
+        host = os.environ.get("VIENEU_MCP_HOST", "127.0.0.1")
+        port = int(os.environ.get("VIENEU_MCP_PORT", "8010"))
+        asyncio.run(mcp.run_sse_async(host=host, port=port))
     else:
         mcp.run(transport="stdio")
 

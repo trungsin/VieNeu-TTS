@@ -76,7 +76,7 @@ dependencies = [
     "tokenizers>=0.20", # phoneme tokenizer (torch-free)
     "huggingface_hub", # fetch ONNX / config / tokenizer / voices
     "PyYAML", # gradio config.yaml
-    "gradio>=5.49.1", # web UI (vieneu-web)
+    "gradio>=5.49.1,<6", # web UI (vieneu-web); gradio 6 dropped Textbox.show_copy_button etc.
     "librosa>=0.11.0",
     # NOTE: audio watermarking is opt-in via `pip install vieneu[watermark]` (resemble-perth,
     # needs torch/torchaudio). The PyPI package literally named `perth` is an unrelated
