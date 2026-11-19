@@ -1,0 +1,7 @@
+tunnel: cba5a4b8-8293-478d-bc50-4df7bedf14f1
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: tts.datxanhmientrung.ai
+    service: http://localhost:7860
+  - service: http_status:404
